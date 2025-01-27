@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RouteSnap</title>
+    <link href="/main.css" rel="stylesheet" />
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <%- include('nav.ejs') %>
+
+    <!-- 메인 배너 섹션 -->
+    <section class="hero bg-primary text-white text-center py-5">
+      <div class="container">
+        <h1 class="display-4 font-weight-bold">RouteSnap🧳</h1>
+        <p class="lead">여행 계획을 간편하게 관리하세요!</p>
+
+        <!-- 버튼들 -->
+        <div class="d-flex justify-content-center mt-4">
+          <button
+            id="go-to-dashboard-btn"
+            data-url="/dashboard"
+            class="btn btn-dark btn-lg mx-2"
+          >
+            내 플래너
+          </button>
+          <button
+            id="add-planner-btn"
+            data-url="/create/planner"
+            class="btn btn-dark btn-lg mx-2"
+          >
+            플래너 만들기
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      // 버튼 클릭 시 데이터 속성에 정의된 URL로 이동
+      $("button").click(function () {
+        const url = $(this).data("url");
+        window.location.href = url;
+      });
+    </script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

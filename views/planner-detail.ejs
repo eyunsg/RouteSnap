@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RouteSnap - <%= planner.planner_name %></title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="/main.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div id="overlay" class="d-none">
+      <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <%- include('nav.ejs') %>
+
+    <div class="container mt-4">
+      <div class="row">
+        <!-- 왼쪽: 스케줄 리스트 -->
+        <div class="col-md-6">
+          <div class="planner-details-container">
+            <div class="planner-list">
+              <div class="row mb-3">
+                <div class="header-box col">
+                  <h1><%= planner.planner_name %></h1>
+                  <h3><%= planner.event_date %></h3>
+                </div>
+                <div class="col-auto">
+                  <button id="delete-planner-btn" class="btn btn-danger mb-2">
+                    삭제
+                  </button>
+                  <button id="edit-planner-btn" class="btn btn-warning mb-2">
+                    수정
+                  </button>
+                  <button id="refresh-planner-btn" class="btn btn-secondary mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                      <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <hr />
+
+              <div class="schedules-container">
+                <% if (schedules.length > 0) { %> <% schedules.forEach(schedule => { %>
+                <div
+                  class="schedule-card mb-3"
+                  id="schedule-item-<%= schedule.schedule_id %>"
+                >
+                  <input
+                    type="hidden"
+                    name="schedule-id"
+                    value="<%= schedule.schedule_id %>"
+                  />
+                  <div class="card">
+                    <div class="card-body">
+                      <p class="card-text">
+                        출발 -
+                        <strong><%= schedule.departure_location %></strong>
+                      </p>
+                      <p class="card-text">
+                        ⮑ <%= schedule.transportation_mode %> [ 약 <%=
+                        schedule.travel_time %> ] 이동
+                      </p>
+                      <p class="card-text">
+                        도착 -
+                        <strong><%= schedule.arrival_location %></strong> [ <%
+                        if (schedule.stay_duration >= 60) { %>
+                        <%= Math.floor(schedule.stay_duration / 60) %>시간
+                        <%= schedule.stay_duration % 60 %>분
+                        <% } else { %>
+                        <%= schedule.stay_duration %>분
+                        <% } %>
+                        ] 체류
+                      </p>
+                      <% if (schedule.quick_memo !== null && schedule.quick_memo !== "") { %>
+                      <p class="card-text">
+                        📋 - <%= schedule.quick_memo %>
+                      </p>
+                      <% } %>
+                      <button class="schedule-delete-btn btn btn-danger btn-sm">
+                        삭제
+                      </button>
+                      <button class="schedule-edit-btn btn btn-warning btn-sm">
+                        수정
+                      </button>
+                      <button 
+                      class="schedule-detail-btn btn btn-secondary btn-sm"
+                      data-scheduleId="<%= schedule.schedule_id %>"
+                      data-departure="<%= schedule.departure_location %>"
+                      data-transportation="<%= schedule.transportation_mode %>"
+                      data-arrival="<%= schedule.arrival_location %>"
+                      >
+                        상세 정보
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <% }) %>
+                <% } else { %>
+                <p>일정이 없습니다.</p>
+                <% } %>
+              </div>
+
+              <button id="add-schedule" class="btn btn-primary">
+                일정 추가하기
+              </button>
+
+              <div class="add-schedule mt-4" style="display: none">
+                <form action="/planner/add-schedule" method="POST">
+                  <input
+                    type="hidden"
+                    name="planner_id"
+                    id="planner_id"
+                    value="<%= planner.planner_id %>"
+                  />
+
+                  <div class="mb-3">
+                    <input
+                      type="text"
+                      id="departure_location"
+                      name="departure_location"
+                      class="form-control"
+                      placeholder="출발지* (자세히 입력할수록 정확도가 높아집니다.)"
+                    />
+                  </div>
+
+                  <div class="mb-3">
+                    <select
+                      name="transportation_mode"
+                      id="transportation_mode"
+                      class="form-select"
+                      style="width: 120px"
+                    >
+                      <option value="" disabled selected>이동 수단*</option>
+                      <option value="walk">🚶</option>
+                      <option value="car">🚗</option>
+                      <option value="transit">🚇/🚌</option>
+                    </select>
+                  </div>
+
+                  <div class="mb-3">
+                    <input
+                      type="text"
+                      id="arrival_location"
+                      name="arrival_location"
+                      class="form-control"
+                      placeholder="도착지* (자세히 입력할수록 정확도가 높아집니다.)"
+                    />
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="stay_duration_hours">머물 시간(선택)</label>
+                    <input
+                      type="number"
+                      id="stay_duration_hours"
+                      name="stay_duration_hours"
+                      class="form-control d-inline-block"
+                      style="width: 60px"
+                      min="0"
+                      max="24"
+                      value="0"
+                    />
+                    시간
+                    <input
+                      type="number"
+                      id="stay_duration_minutes"
+                      name="stay_duration_minutes"
+                      class="form-control d-inline-block"
+                      style="width: 60px"
+                      min="0"
+                      max="59"
+                      value="0"
+                    />
+                    분
+                  </div>
+
+                  <div class="mb-3">
+                    <input
+                      type="text"
+                      id="quick_memo"
+                      name="quick_memo"
+                      class="form-control"
+                      placeholder="퀵 메모 (최대 255자)"
+                      maxlength="255"
+                    />
+                  </div>
+
+                  <div class="mb-3">
+                    <button type="button" id="schedule-cancel-btn" class="btn btn-secondary">
+                      취소
+                    </button>
+                    <button
+                      type="submit"
+                      id="schedule-add-btn"
+                      class="btn btn-success"
+                    >
+                      일정 추가하기 (최대 10초 소요)
+                    </button>
+                  </div>
+                </form>
+                <div class="modal" id="errorModal" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">입력 오류</h5>
+                        <button
+                          type="button"
+                          class="btn-close"
+                          data-bs-dismiss="modal"
+                          aria-label="Close"
+                        ></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>모든 필수 필드를 채워주세요.</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button
+                          type="button"
+                          class="btn btn-secondary"
+                          data-bs-dismiss="modal"
+                        >
+                          닫기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 지도 -->
+        <div class="col-md-6">
+          <div class="map mt-4">
+            <iframe
+              src="<%= mapUrl ? mapUrl : 'https://map.naver.com/p/directions/-/-/-/car?c=14.00,0,0,0,dh' %>"
+              width="100%"
+              height="600px"
+            >
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function sendDeleteRequest(url, onSuccess, onError) {
+        $.ajax({
+          url: url,
+          method: "DELETE",
+          success: onSuccess,
+          error: onError,
+        });
+      }
+
+      function generateHeaderForm(planner_id, plannerName, eventDate) {
+        let formattedDate = "";
+
+        if (eventDate) {
+          try {
+            const dateParts = eventDate
+              .replace(/년|월|일/g, "")
+              .trim()
+              .split(" ");
+
+            if (dateParts.length === 3) {
+              formattedDate = `${dateParts[0]}-${dateParts[1].padStart(2, "0")}-${dateParts[2].padStart(2, "0")}`;
+            }
+
+            const date = new Date(formattedDate);
+            if (isNaN(date)) {
+              throw new Error("Invalid date format");
+            }
+          } catch (error) {
+            console.error("Error processing eventDate:", eventDate, error);
+            formattedDate = "";
+          }
+        }
+
+        return `
+    <form action="/planner/header/edit" method="POST" class="p-4 border rounded bg-light shadow-sm">
+      <input type="hidden" name="planner-id" value="${planner_id}">
+
+      <div class="mb-3">
+        <label for="planner-name" class="form-label">플래너 이름</label>
+        <input type="text" class="form-control" id="planner-name" name="planner-name" value="${plannerName}">
+      </div>
+
+      <div class="mb-3">
+        <label for="event-date" class="form-label">날짜</label>
+        <input type="date" class="form-control" id="event-date" name="event-date" value="${formattedDate}">
+      </div>
+
+      <div class="d-flex justify-content-between">
+        <button type="button" id="header-cancel-btn" class="btn btn-secondary">취소</button>
+        <button type="submit" class="btn btn-primary">저장</button>
+      </div>
+    </form>
+  `;
+      }
+
+      function convertMinutesToHours(minutes) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return { hours, mins };
+      }
+
+      $("#add-schedule").click(() => {
+        $("#add-schedule").hide();
+        $(".add-schedule").show();
+      });
+
+      $(document).ready(function () {
+        $("#schedule-add-btn").click(() => {
+            // 폼의 제출 이벤트를 감지
+            $('form[action="/planner/add-schedule"]').on('submit', function (e) {
+              e.preventDefault();
+              const departure = $("#departure_location").val();
+              const transportation = $("#transportation_mode").val();
+              const arrival = $("#arrival_location").val();
+              let quickMemo = $("#quick_memo").val();
+
+              if (!departure || !transportation || !arrival) {
+                $("#errorModal").modal("show");
+                return;
+              }
+
+              $("#schedule-cancel-btn").hide();
+              $("#schedule-add-btn").html("예상 소요 시간 계산 중...");
+
+              $('form[action="/planner/add-schedule"]')[0].submit();
+            });
+        });
+      });
+
+      $("#schedule-cancel-btn").click(() => {
+        $("form")[0].reset();
+
+        $(".add-schedule").hide();
+        $("#add-schedule").show();
+      })
+
+      $("#delete-planner-btn").click(() => {
+        const result = confirm("전체 플래너를 삭제할까요?");
+        const planner_id = $("#planner_id").val();
+
+        if (result) {
+          sendDeleteRequest(
+            `/planner/detail/${planner_id}`,
+            () => (window.location.href = "/dashboard"),
+            (err) => console.error("삭제 오류: ", err),
+          );
+        }
+      });
+
+      $(".schedules-container").on("click", ".schedule-delete-btn", function () {
+        const result = confirm("해당 스케줄을 삭제할까요?");
+        const scheduleId = $(this)
+          .closest(".schedule-card")
+          .find('input[type="hidden"]')
+          .val();
+
+        if (result) {
+          sendDeleteRequest(
+            `/planner/schedule/${scheduleId}`,
+            () => $(`#schedule-item-${scheduleId}`).remove(),
+            (err) => console.error("삭제 오류: ", err),
+          );
+        }
+      });
+
+      $("#edit-planner-btn").click(function () {
+          const planner_id = "<%= planner.planner_id %>";
+          const plannerName = "<%= planner.planner_name %>";
+          const eventDate = "<%= planner.event_date %>";
+
+          const headerForm = generateHeaderForm(planner_id, plannerName, eventDate);
+
+          $(".header-box").html(headerForm);
+      });
+
+      $(".schedules-container").on("click", ".schedule-edit-btn", function () {
+        const planner_id = "<%= planner.planner_id %>";
+
+        const scheduleId = $(this)
+          .closest(".schedule-card")
+          .find('input[type="hidden"]')
+          .val();
+
+        const schedules = <%- JSON.stringify(schedules) %>;
+
+        const scheduleData = schedules.find(
+          (schedule) => schedule.schedule_id == scheduleId,
+        );
+        
+        if (scheduleData) {
+          const scheduleItemDiv = $(
+            `.schedule-card:has(input[type="hidden"][value="${scheduleId}"])`,
+          );
+
+          const travelTime = convertMinutesToHours(scheduleData.travel_time);
+          const stayDuration = convertMinutesToHours(
+            scheduleData.stay_duration,
+          );
+
+          const originalHTML = scheduleItemDiv.html();
+
+          scheduleItemDiv.html(`
+            <form action="/planner/schedule/edit" method="POST">
+            <input type="hidden" name="planner-id" value="${planner_id}">
+            <input type="hidden" name="schedule-id" value="${scheduleId}">
+
+            <p>출발<input type="text" name="departure_location" value="${scheduleData.departure_location}" class="form-control" required></p>
+
+            <div class="mb-3">
+              <p>
+                이동 수단
+              <select name="transportation_mode" class="form-select" required>
+                <option value="walk" ${scheduleData.transportation_mode === '🚶' ? 'selected' : ''}>🚶</option>
+                <option value="car" ${scheduleData.transportation_mode === '🚗' ? 'selected' : ''}>🚗</option>
+                <option value="transit" ${scheduleData.transportation_mode === '🚇/🚌' ? 'selected' : ''}>🚇/🚌</option>
+              </select>
+              </p>
+            </div>
+
+            <p>이동 시간<input type="text" name="travel_time" value="${scheduleData.travel_time}" class="form-control" required /></p>
+
+            <p>도착<input type="text" name="arrival_location" value="${scheduleData.arrival_location}" class="form-control" required /></p>
+
+            <div class="mb-3">
+              <label for="stay_duration_hours">머물 시간</label>
+              <br />
+              <input type="number" name="stay_duration_hours" class="form-control d-inline-block" style="width: 60px" value="${stayDuration.hours}" required />
+              시간
+              <input type="number" name="stay_duration_minutes" class="form-control d-inline-block" style="width: 60px" value="${stayDuration.mins}" required />
+              분
+            </div>
+
+            <div class="mb-3 d-flex justify-content-end">
+              <button type="submit" class="btn btn-success">저장</button>
+              <button type="button" id="schedule-edit-cancel-btn" class="btn btn-secondary ms-2">취소</button>
+            </div>
+          </form>
+        `);
+
+        $('#schedule-edit-cancel-btn').click(() => {
+          scheduleItemDiv.html(originalHTML);
+        });
+        }
+      });
+
+      $(document).on('click', '#header-cancel-btn', () => {
+          window.location.reload();
+      });
+
+      $(document).on('click', '.schedule-detail-btn', function () {
+        const scheduleCard = $(this).closest('.schedule-card');
+        
+        const departure = scheduleCard.find('.card-text strong').eq(0).text();
+        let transportation = scheduleCard
+          .find('.card-text')
+          .eq(1)
+          .text()
+          .trim()
+          .split(' ')[1];
+        switch(transportation){
+          case "🚗": transportation = "car";
+          break;
+          
+          case "🚶": transportation = "walk";
+          break;
+
+          case "🚇/🚌": transportation = "transit";
+          break;
+        }
+        const arrival = scheduleCard.find('.card-text strong').eq(1).text();
+        const scheduleId = $(this).data('scheduleid');
+        const plannerId = "<%= planner.planner_id %>";
+
+        $('.schedule-detail-btn').prop("disabled", true).text("로딩 중...");
+
+        $.ajax({
+          url: '/schedule/refresh',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({
+            plannerId: plannerId,
+            scheduleId: scheduleId,
+            departure: departure,
+            transportation: transportation,
+            arrival: arrival,
+          }),
+          success: function (response) {
+            $('.schedule-detail-btn').prop("disabled", false).text("상세 정보");
+            console.log('서버 응답:', response);
+            if (response) {
+            window.location.href = response;
+          }
+          },
+          error: function (xhr, status, error) {
+            $('.schedule-detail-btn').prop("disabled", false).text("상세 정보");
+            console.error('오류 발생:', error);
+          },
+        });
+      })
+
+      $("#refresh-planner-btn").click(function () {
+        const schedules = <%- JSON.stringify(schedules) %>;
+
+        $("#overlay").removeClass("d-none");
+
+        $.ajax({
+          url: "/api/refresh-all-travel-times",
+          type: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({ schedules }),
+          success: function () {
+            // 서버에서 DB 업데이트 완료 후 페이지 새로고침
+            console.log("스케줄 갱신 완료");
+            location.reload(); // 페이지 새로고침
+          },
+          error: function (err) {
+            console.error("스케줄 갱신 중 오류 발생:", err);
+          },
+          complete: function () {
+            $("#overlay").addClass("d-none");
+          },
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RouteSnap - 내 플래너</title>
+    <link href="/main.css" rel="stylesheet" />
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <%- include('nav.ejs') %>
+
+    <div class="container mt-5">
+      <h1 class="text-center mb-4">내 플래너</h1>
+
+      <div class="mb-4 d-flex justify-content-end">
+        <select id="sort-select" class="form-control w-auto">
+          <option value="" disabled selected>정렬</option>
+          <option value="date" <%= sort === 'date' ? 'selected' : '' %>>날짜순</option>
+          <option value="name" <%= sort === 'name' ? 'selected' : '' %>>이름순</option>
+        </select>
+      </div>
+
+      <!-- 플래너 리스트가 있을 경우 렌더링 -->
+      <% if (plannerList && plannerList.length > 0) { %>
+      <div class="row">
+        <% plannerList.forEach(planner => { %>
+        <div class="col-md-4 mb-4">
+          <div
+            class="card"
+            style="cursor: pointer"
+            onclick="window.location.href='/planner/detail/<%= planner.planner_id %>'"
+          >
+            <div class="card-body">
+              <h5 class="card-title">
+                <strong><%= planner.planner_name %></strong>
+              </h5>
+              <p class="card-text"><%= planner.event_date %></p>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+      <div class="text-center">
+        <button id="add-planner-btn" class="btn btn-primary">
+          플래너 추가하기
+        </button>
+      </div>
+      <% } else { %>
+      <div class="alert alert-warning text-center" role="alert">
+        <p>플래너가 없습니다.</p>
+        <button id="add-planner-btn" class="btn btn-primary">
+          플래너 만들기
+        </button>
+      </div>
+      <% } %>
+    </div>
+
+    <script>
+      // 플래너 추가 버튼 클릭 시 플래너 생성 페이지로 이동
+      $("#add-planner-btn").click(() => {
+        window.location.href = `/create/planner`;
+      });
+
+      // $("#sort-date-btn").click(() => {
+      //   window.location.href = "/dashboard?sort=date";
+      // });
+
+      // $("#sort-name-btn").click(() => {
+      //   window.location.href = "/dashboard?sort=name";
+      // });
+
+      // 정렬 기준 선택 시 페이지 새로고침
+      $("#sort-select").change(function () {
+        const sortOption = $(this).val();
+        window.location.href = `/dashboard?sort=${sortOption}`;
+      });
+    </script>
+    </script>
+  </body>
+</html>
