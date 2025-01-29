@@ -11,11 +11,28 @@ const { google } = require("googleapis");
 const crypto = require("crypto");
 const axios = require("axios");
 const { render } = require("ejs");
+const rateLimit = require("express-rate-limit");
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_SECRET;
 const GOOGLE_APP_PASSWORD = process.env.GOOGLE_APP_PASSWORD;
 const CLOUDFLARE_SECRET_KEY = process.env.CLOUDFLARE_SECRET_KEY;
+
+// 로그인 시도에 대한 Rate Limiting 설정
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  max: 5, // 15분 내 최대 5회 요청
+  message:
+    "로그인 요청 그만해라. 15분 뒤에 다시 해보도록. (일단 임시로 페이지에 띄움)",
+});
+
+// 이메일 인증 요청에 대한 Rate Limiting 설정
+const emailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  max: 3, // 15분 내 최대 3회 요청
+  message:
+    "이메일 요청 그만해라. 15분 뒤에 다시 해보도록. (일단 임시로 페이지에 띄움)",
+});
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -253,7 +270,7 @@ router.get("/login", (req, res) => {
   res.render("login", { loginErrorMessage });
 });
 
-router.post("/login", (req, res, next) => {
+router.post("/login", loginLimiter, (req, res, next) => {
   passport.authenticate("local", (error, user, info) => {
     if (error) {
       return next(error); // 서버 에러 발생 시
@@ -324,7 +341,7 @@ router.post("/validate-username", async (req, res) => {
   }
 });
 
-router.post("/validate-email", async (req, res) => {
+router.post("/validate-email", emailLimiter, async (req, res) => {
   const { email } = req.body;
 
   // 이메일 유효성 검사
