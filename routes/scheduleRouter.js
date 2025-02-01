@@ -25,31 +25,15 @@ router.post("/planner/add-schedule", (req, res) => {
 
   var travelDuration = "";
 
-  if (transportation_mode === "transit") {
-    getTransitTravelTimeBy(departure_location, arrival_location).then(
-      (travelResult) => {
-        travelDuration = travelResult.duration;
-        mapUrl = travelResult.mapUrl;
-        insertScheduleIntoDb(travelDuration, mapUrl);
-      },
-    );
-  } else if (transportation_mode === "car") {
-    getCarTravelTimeBy(departure_location, arrival_location).then(
-      (travelResult) => {
-        travelDuration = travelResult.duration;
-        mapUrl = travelResult.mapUrl;
-        insertScheduleIntoDb(travelDuration, mapUrl);
-      },
-    );
-  } else if (transportation_mode === "walk") {
-    getWalkTravelTimeBy(departure_location, arrival_location).then(
-      (travelResult) => {
-        travelDuration = travelResult.duration;
-        mapUrl = travelResult.mapUrl;
-        insertScheduleIntoDb(travelDuration, mapUrl);
-      },
-    );
-  }
+  getTravelTimeByMode(
+    transportation_mode,
+    departure_location,
+    arrival_location,
+  ).then((travelResult) => {
+    travelDuration = travelResult.duration;
+    mapUrl = travelResult.mapUrl;
+    insertScheduleIntoDb(travelDuration, mapUrl);
+  });
 
   function insertScheduleIntoDb(travel_time, mapUrl) {
     const query = `
@@ -164,33 +148,16 @@ router.post("/planner/schedule/edit", (req, res) => {
 router.post("/schedule/refresh", (req, res) => {
   const { plannerId, scheduleId, departure, transportation, arrival } =
     req.body;
+
   console.log(plannerId);
 
-  switch (transportation) {
-    case "transit":
-      getTransitTravelTimeBy(departure, arrival).then((travelResult) => {
-        travelDuration = travelResult.duration;
-        mapUrl = travelResult.mapUrl;
-        updateScheduleIntoDb(travelDuration, scheduleId, mapUrl);
-      });
-      break;
-
-    case "car":
-      getCarTravelTimeBy(departure, arrival).then((travelResult) => {
-        travelDuration = travelResult.duration;
-        mapUrl = travelResult.mapUrl;
-        updateScheduleIntoDb(travelDuration, scheduleId, mapUrl);
-      });
-      break;
-
-    case "walk":
-      getWalkTravelTimeBy(departure, arrival).then((travelResult) => {
-        travelDuration = travelResult.duration;
-        mapUrl = travelResult.mapUrl;
-        updateScheduleIntoDb(travelDuration, scheduleId, mapUrl);
-      });
-      break;
-  }
+  getTravelTimeByMode(transportation, departure, arrival).then(
+    (travelResult) => {
+      travelDuration = travelResult.duration;
+      mapUrl = travelResult.mapUrl;
+      updateScheduleIntoDb(travelDuration, scheduleId, mapUrl);
+    },
+  );
 
   function updateScheduleIntoDb(travel_time, scheduleId, mapUrl) {
     const query = `
@@ -227,20 +194,48 @@ router.post("/api/refresh-all-travel-times", async (req, res) => {
     let travelTime = 0; // 초기값 설정
 
     // 이동 수단에 따른 계산
+    // switch (transportation_mode) {
+    //   case "🚶":
+    //     travelTime = (
+    //       await getWalkTravelTimeBy(departure_location, arrival_location)
+    //     ).duration;
+    //     break;
+    //   case "🚗":
+    //     travelTime = (
+    //       await getCarTravelTimeBy(departure_location, arrival_location)
+    //     ).duration;
+    //     break;
+    //   case "🚇/🚌":
+    //     travelTime = (
+    //       await getTransitTravelTimeBy(departure_location, arrival_location)
+    //     ).duration;
+    //     break;
+    //   default:
+    //     travelTime = 0; // 기본값
+    // }
+
     switch (transportation_mode) {
       case "🚶":
         travelTime = (
-          await getWalkTravelTimeBy(departure_location, arrival_location)
+          await getTravelTimeByMode(
+            "walk",
+            departure_location,
+            arrival_location,
+          )
         ).duration;
         break;
       case "🚗":
         travelTime = (
-          await getCarTravelTimeBy(departure_location, arrival_location)
+          await getTravelTimeByMode("car", departure_location, arrival_location)
         ).duration;
         break;
       case "🚇/🚌":
         travelTime = (
-          await getTransitTravelTimeBy(departure_location, arrival_location)
+          await getTravelTimeByMode(
+            "transit",
+            departure_location,
+            arrival_location,
+          )
         ).duration;
         break;
       default:
@@ -269,6 +264,20 @@ router.post("/api/refresh-all-travel-times", async (req, res) => {
     res.status(500).send("Error updating travel times");
   }
 });
+
+// 이동 시간 가져오는 함수 (중복 제거)
+async function getTravelTimeByMode(mode, start, end) {
+  switch (mode) {
+    case "transit":
+      return getTransitTravelTimeBy(start, end);
+    case "car":
+      return getCarTravelTimeBy(start, end);
+    case "walk":
+      return getWalkTravelTimeBy(start, end);
+    default:
+      return { duration: 0, mapUrl: "" };
+  }
+}
 
 async function getCarTravelTimeBy(startLocation, endLocation) {
   console.log("자동차 이동 시간 계산 중...");
