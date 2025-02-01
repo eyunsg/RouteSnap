@@ -466,6 +466,7 @@
 
       $(document).on('click', '.schedule-detail-btn', function () {
         const scheduleCard = $(this).closest('.schedule-card');
+        const scheduleDetailBtn = $(this).closest('.schedule-detail-btn');
         
         const departure = scheduleCard.find('.card-text strong').eq(0).text();
         let transportation = scheduleCard
@@ -488,7 +489,7 @@
         const scheduleId = $(this).data('scheduleid');
         const plannerId = "<%= planner.planner_id %>";
 
-        $('.schedule-detail-btn').prop("disabled", true).text("로딩 중...");
+        scheduleDetailBtn.prop("disabled", true).text("로딩 중...");
 
         $.ajax({
           url: '/schedule/refresh',
